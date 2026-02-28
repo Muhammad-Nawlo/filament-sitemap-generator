@@ -16,10 +16,10 @@ use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\LivewireServiceProvider;
+use MuhammadNawlo\FilamentSitemapGenerator\FilamentSitemapGeneratorServiceProvider;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
-use MuhammadNawlo\FilamentSitemapGenerator\FilamentSitemapGeneratorServiceProvider;
 use Spatie\Sitemap\SitemapServiceProvider;
 
 class TestCase extends Orchestra

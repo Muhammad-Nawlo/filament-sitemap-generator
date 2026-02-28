@@ -11,7 +11,7 @@ use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapGeneratorService;
 
 class SitemapGeneratorPage extends Page
 {
-    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+    protected static string | \UnitEnum | null $navigationGroup = 'Settings';
 
     protected static ?string $navigationLabel = 'Sitemap';
 

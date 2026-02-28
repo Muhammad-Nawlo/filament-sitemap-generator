@@ -2,6 +2,4 @@
 
 namespace MuhammadNawlo\FilamentSitemapGenerator;
 
-class FilamentSitemapGenerator
-{
-}
+class FilamentSitemapGenerator {}

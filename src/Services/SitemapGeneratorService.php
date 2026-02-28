@@ -16,8 +16,7 @@ class SitemapGeneratorService
 {
     public function __construct(
         private readonly ?HttpClientFactory $http = null
-    ) {
-    }
+    ) {}
 
     public function generate(): bool
     {
@@ -109,6 +108,7 @@ class SitemapGeneratorService
 
         if ($partUrls === [] && $count > 0) {
             $current->writeToFile($path);
+
             return [];
         }
 
@@ -190,8 +190,10 @@ class SitemapGeneratorService
     {
         if (method_exists($record, 'getSitemapUrl')) {
             $url = $record->getSitemapUrl();
+
             return is_string($url) ? $this->normalizeUrl($url) : null;
         }
+
         return null;
     }
 
@@ -199,9 +201,11 @@ class SitemapGeneratorService
     {
         if (method_exists($record, 'getSitemapNewsPublicationDate')) {
             $date = $record->getSitemapNewsPublicationDate();
+
             return $date instanceof DateTimeInterface ? $date : null;
         }
         $date = $record->published_at ?? $record->updated_at ?? $record->created_at ?? null;
+
         return $date instanceof DateTimeInterface ? $date : null;
     }
 
@@ -255,6 +259,7 @@ class SitemapGeneratorService
         $this->applyModelLastmod($tag, $record);
         $this->applyAlternateUrls($tag, $record);
         $this->applySitemapImages($tag, $record);
+
         return $tag;
     }
 
@@ -265,6 +270,7 @@ class SitemapGeneratorService
             if ($date instanceof DateTimeInterface) {
                 $tag->setLastModificationDate($date);
             }
+
             return;
         }
         if (isset($record->updated_at) && $record->updated_at !== null && $record->updated_at instanceof DateTimeInterface) {
@@ -313,14 +319,17 @@ class SitemapGeneratorService
     {
         if (method_exists($model, 'getSitemapUrl')) {
             $url = $model->getSitemapUrl();
+
             return is_string($url) ? $this->normalizeUrl($url) : null;
         }
         $routeName = $options['route'] ?? null;
         if ($routeName === null || $routeName === '') {
             return null;
         }
+
         try {
             $url = route($routeName, $model);
+
             return $this->normalizeUrl($url);
         } catch (\Throwable) {
             return null;
@@ -347,12 +356,14 @@ class SitemapGeneratorService
         }
         $base = $this->getBaseUrl();
         $path = ltrim($url, '/');
+
         return $path === '' ? rtrim($base, '/') : rtrim($base, '/') . '/' . $path;
     }
 
     private function getBaseUrl(): string
     {
         $base = config('filament-sitemap-generator.base_url') ?? config('app.url', '');
+
         return rtrim((string) $base, '/');
     }
 }

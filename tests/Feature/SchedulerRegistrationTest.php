@@ -12,6 +12,7 @@ it('registers command in schedule when schedule enabled', function (): void {
         $command = $event->command ?? '';
         if (str_contains($command, 'filament-sitemap-generator:generate')) {
             $hasSitemapCommand = true;
+
             break;
         }
     }
