@@ -11,12 +11,6 @@ use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapGeneratorService;
 
 class SitemapGeneratorPage extends Page
 {
-    protected static ?string $navigationGroup = null;
-
-    protected static ?string $navigationLabel = null;
-
-    protected static ?string $title = null;
-
     public static function getNavigationGroup(): string
     {
         return __('filament-sitemap-generator::navigation.group');
@@ -27,7 +21,7 @@ class SitemapGeneratorPage extends Page
         return __('filament-sitemap-generator::navigation.label');
     }
 
-    public static function getTitle(): string
+    public function getTitle(): string
     {
         return __('filament-sitemap-generator::page.title');
     }

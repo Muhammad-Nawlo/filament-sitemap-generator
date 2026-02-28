@@ -7,7 +7,7 @@
 
 A config-driven Filament plugin for Laravel that generates XML sitemaps with optional splitting, news, images, alternates, and search-engine ping. Built on [spatie/laravel-sitemap](https://github.com/spatie/laravel-sitemap).
 
-**Compatibility:** Filament v3.2+, v4.x, and v5.x.
+**Compatibility:** Filament v3.2+, v4.x, and v5.x. The Filament page uses getter overrides only for navigation group, label, and title (no static property redeclaration), so it stays compatible with differing parent types across Filament versions.
 
 ## Installation
 
@@ -101,10 +101,10 @@ This runs the Pest test suite (typically `./vendor/bin/pest`).
 
 | Laravel | Filament | PHP | Status |
 |---------|----------|-----|--------|
-| 10.x | 5.x | 8.2+ | Supported (via composer constraints) |
-| 11.x | 5.x | 8.2+ | Supported (via composer constraints) |
+| 10.x | 3.2+ / 4.x / 5.x | 8.2+ | Supported (via composer constraints) |
+| 11.x | 3.2+ / 4.x / 5.x | 8.2+ | Supported (via composer constraints) |
 
-Composer constraints: `php: ^8.2`, `filament/filament: ^5.0`. Laravel version is implied by Filament and other dependencies. Older Laravel or Filament versions are not tested or supported.
+Composer constraints: `php: ^8.2`, `filament/filament: ^3.2 || ^4.0 || ^5.0`. Laravel version is implied by Filament and other dependencies. CI may run on a subset of these; report issues for specific version combinations.
 
 ---
 
