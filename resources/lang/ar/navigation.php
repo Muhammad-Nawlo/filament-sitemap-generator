@@ -3,6 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'group' => 'الإعدادات',
-    'label' => 'خريطة الموقع',
+    'group' => 'مولد خريطة الموقع',
+    'label' => 'ملخص',
 ];

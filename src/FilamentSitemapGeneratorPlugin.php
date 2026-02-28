@@ -5,6 +5,7 @@ namespace MuhammadNawlo\FilamentSitemapGenerator;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use MuhammadNawlo\FilamentSitemapGenerator\Pages\SitemapGeneratorPage;
+use MuhammadNawlo\FilamentSitemapGenerator\Pages\SitemapSettingsPage;
 
 class FilamentSitemapGeneratorPlugin implements Plugin
 {
@@ -17,6 +18,7 @@ class FilamentSitemapGeneratorPlugin implements Plugin
     {
         $panel->pages([
             SitemapGeneratorPage::class,
+            SitemapSettingsPage::class,
         ]);
     }
 

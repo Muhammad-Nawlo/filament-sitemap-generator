@@ -59,7 +59,12 @@ class GenerateSitemapCommand extends Command
     private function runSynchronously(): int
     {
         try {
-            $this->sitemapGenerator->generate();
+            $run = $this->sitemapGenerator->generate();
+            if (! $run->isSuccess()) {
+                $this->error(__('filament-sitemap-generator::command.failed') . ': ' . ($run->error_message ?? 'Unknown error'));
+
+                return self::FAILURE;
+            }
             $this->info(__('filament-sitemap-generator::command.success'));
 
             return self::SUCCESS;

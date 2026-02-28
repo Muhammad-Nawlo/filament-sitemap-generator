@@ -5,6 +5,12 @@ declare(strict_types=1);
 return [
     'path' => public_path('sitemap.xml'),
 
+    'sitemap_run_model' => \MuhammadNawlo\FilamentSitemapGenerator\Models\SitemapRun::class,
+
+    'sitemap_runs_table' => 'sitemap_runs',
+
+    'sitemap_settings_table' => 'sitemap_settings',
+
     'chunk_size' => 500,
 
     'max_urls_per_file' => 50000,
