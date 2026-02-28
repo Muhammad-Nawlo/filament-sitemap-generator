@@ -58,11 +58,15 @@ class FilamentSitemapGeneratorServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
-        FilamentAsset::register($this->getAssets(), $this->getAssetPackageName());
-        FilamentAsset::registerScriptData($this->getScriptData(), $this->getAssetPackageName());
-        FilamentIcon::register($this->getIcons());
+        if (class_exists(FilamentAsset::class)) {
+            FilamentAsset::register($this->getAssets(), $this->getAssetPackageName());
+            FilamentAsset::registerScriptData($this->getScriptData(), $this->getAssetPackageName());
+        }
+        if (class_exists(FilamentIcon::class)) {
+            FilamentIcon::register($this->getIcons());
+        }
 
-        if (app()->runningInConsole()) {
+        if (app()->runningInConsole() && is_dir(__DIR__ . '/../stubs/')) {
             foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
                 $this->publishes([
                     $file->getRealPath() => base_path("stubs/filament-sitemap-generator/{$file->getFilename()}"),

@@ -7,6 +7,8 @@
 
 A config-driven Filament plugin for Laravel that generates XML sitemaps with optional splitting, news, images, alternates, and search-engine ping. Built on [spatie/laravel-sitemap](https://github.com/spatie/laravel-sitemap).
 
+**Compatibility:** Filament v3.2+, v4.x, and v5.x.
+
 ## Installation
 
 ```bash
