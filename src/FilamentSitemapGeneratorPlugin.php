@@ -1,25 +1,27 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace MuhammadNawlo\FilamentSitemapGenerator;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use MuhammadNawlo\FilamentSitemapGenerator\Pages\SitemapGeneratorPage;
 
-class SkeletonPlugin implements Plugin
+class FilamentSitemapGeneratorPlugin implements Plugin
 {
     public function getId(): string
     {
-        return 'skeleton';
+        return 'filament-sitemap-generator';
     }
 
     public function register(Panel $panel): void
     {
-        //
+        $panel->pages([
+            SitemapGeneratorPage::class,
+        ]);
     }
 
     public function boot(Panel $panel): void
     {
-        //
     }
 
     public static function make(): static

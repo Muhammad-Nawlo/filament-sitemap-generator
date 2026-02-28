@@ -1,34 +1,27 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace MuhammadNawlo\FilamentSitemapGenerator;
 
-use Filament\Support\Assets\AlpineComponent;
-use Filament\Support\Assets\Asset;
-use Filament\Support\Assets\Css;
-use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentIcon;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Filesystem\Filesystem;
 use Livewire\Features\SupportTesting\Testable;
+use MuhammadNawlo\FilamentSitemapGenerator\Commands\GenerateSitemapCommand;
+use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapGeneratorService;
+use MuhammadNawlo\FilamentSitemapGenerator\Testing\TestsFilamentSitemapGenerator;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VendorName\Skeleton\Commands\SkeletonCommand;
-use VendorName\Skeleton\Testing\TestsSkeleton;
 
-class SkeletonServiceProvider extends PackageServiceProvider
+class FilamentSitemapGeneratorServiceProvider extends PackageServiceProvider
 {
-    public static string $name = 'skeleton';
+    public static string $name = 'filament-sitemap-generator';
 
-    public static string $viewNamespace = 'skeleton';
+    public static string $viewNamespace = 'filament-sitemap-generator';
 
     public function configurePackage(Package $package): void
     {
-        /*
-         * This class is a Package Service Provider
-         *
-         * More info: https://github.com/spatie/laravel-package-tools
-         */
         $package->name(static::$name)
             ->hasCommands($this->getCommands())
             ->hasInstallCommand(function (InstallCommand $command) {
@@ -36,7 +29,7 @@ class SkeletonServiceProvider extends PackageServiceProvider
                     ->publishConfigFile()
                     ->publishMigrations()
                     ->askToRunMigrations()
-                    ->askToStarRepoOnGitHub(':vendor_slug/:package_slug');
+                    ->askToStarRepoOnGitHub('muhammad-nawlo/filament-sitemap-generator');
             });
 
         $configFileName = $package->shortName();
@@ -58,95 +51,81 @@ class SkeletonServiceProvider extends PackageServiceProvider
         }
     }
 
-    public function packageRegistered(): void {}
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(SitemapGeneratorService::class);
+    }
 
     public function packageBooted(): void
     {
-        // Asset Registration
-        FilamentAsset::register(
-            $this->getAssets(),
-            $this->getAssetPackageName()
-        );
-
-        FilamentAsset::registerScriptData(
-            $this->getScriptData(),
-            $this->getAssetPackageName()
-        );
-
-        // Icon Registration
+        FilamentAsset::register($this->getAssets(), $this->getAssetPackageName());
+        FilamentAsset::registerScriptData($this->getScriptData(), $this->getAssetPackageName());
         FilamentIcon::register($this->getIcons());
 
-        // Handle Stubs
         if (app()->runningInConsole()) {
             foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
                 $this->publishes([
-                    $file->getRealPath() => base_path("stubs/skeleton/{$file->getFilename()}"),
-                ], 'skeleton-stubs');
+                    $file->getRealPath() => base_path("stubs/filament-sitemap-generator/{$file->getFilename()}"),
+                ], 'filament-sitemap-generator-stubs');
             }
         }
+        $this->registerSchedule();
 
-        // Testing
-        Testable::mixin(new TestsSkeleton);
+        Testable::mixin(new TestsFilamentSitemapGenerator);
     }
 
     protected function getAssetPackageName(): ?string
     {
-        return ':vendor_slug/:package_slug';
+        return 'muhammad-nawlo/filament-sitemap-generator';
     }
 
-    /**
-     * @return array<Asset>
-     */
     protected function getAssets(): array
     {
-        return [
-            // AlpineComponent::make('skeleton', __DIR__ . '/../resources/dist/components/skeleton.js'),
-            // Css::make('skeleton-styles', __DIR__ . '/../resources/dist/skeleton.css'),
-            // Js::make('skeleton-scripts', __DIR__ . '/../resources/dist/skeleton.js'),
-        ];
+        return [];
     }
 
-    /**
-     * @return array<class-string>
-     */
     protected function getCommands(): array
     {
         return [
-            SkeletonCommand::class,
+            GenerateSitemapCommand::class,
         ];
     }
 
-    /**
-     * @return array<string>
-     */
     protected function getIcons(): array
     {
         return [];
     }
 
-    /**
-     * @return array<string>
-     */
     protected function getRoutes(): array
     {
         return [];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     protected function getScriptData(): array
     {
         return [];
     }
 
-    /**
-     * @return array<string>
-     */
     protected function getMigrations(): array
     {
-        return [
-            'create_skeleton_table',
-        ];
+        return [];
+    }
+
+    private function registerSchedule(): void
+    {
+        if (config('filament-sitemap-generator.schedule.enabled', false) !== true) {
+            return;
+        }
+
+        $this->app->booted(function (): void {
+            $schedule = $this->app->make(Schedule::class);
+            $event = $schedule->command('filament-sitemap-generator:generate');
+            $frequency = config('filament-sitemap-generator.schedule.frequency', 'daily');
+            if (is_string($frequency) && method_exists($event, $frequency)) {
+                $event->{$frequency}();
+            } else {
+                $event->daily();
+            }
+        });
     }
 }

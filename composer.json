@@ -1,33 +1,32 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "muhammad-nawlo/filament-sitemap-generator",
+    "description": "Filament plugin to generate XML sitemaps with splitting, news, images, and search-engine ping",
     "keywords": [
-        ":vendor_name",
+        "Muhammad-Nawlo",
         "laravel",
         "filamentphp",
         "filament",
         "filament-plugin",
-        ":package_slug"
+        "filament-sitemap-generator"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/muhammad-nawlo/filament-sitemap-generator",
     "support": {
-        "issues": "https://github.com/:vendor_slug/:package_slug/issues",
-        "source": "https://github.com/:vendor_slug/:package_slug"
+        "issues": "https://github.com/muhammad-nawlo/filament-sitemap-generator/issues",
+        "source": "https://github.com/muhammad-nawlo/filament-sitemap-generator"
     },
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Muhammad-Nawlo",
+            "email": "nawlomuhammadit@gmail.com",
             "role": "Developer"
         }
     ],
     "require": {
         "php": "^8.2",
         "filament/filament": "^5.0",
-        "filament/forms": "^5.0",
-        "filament/tables": "^5.0",
-        "spatie/laravel-package-tools": "^1.15.0"
+        "spatie/laravel-package-tools": "^1.15.0",
+        "spatie/laravel-sitemap": "^7.4"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
@@ -43,13 +42,13 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src/",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories/"
+            "MuhammadNawlo\\FilamentSitemapGenerator\\": "src/",
+            "MuhammadNawlo\\FilamentSitemapGenerator\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests/"
+            "MuhammadNawlo\\FilamentSitemapGenerator\\Tests\\": "tests/"
         }
     },
     "scripts": {
@@ -64,10 +63,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "MuhammadNawlo\\FilamentSitemapGenerator\\FilamentSitemapGeneratorServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "FilamentSitemapGenerator": "MuhammadNawlo\\FilamentSitemapGenerator\\Facades\\FilamentSitemapGenerator"
             }
         }
     },

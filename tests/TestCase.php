@@ -1,6 +1,6 @@
 <?php
 
-namespace VendorName\Skeleton\Tests;
+namespace MuhammadNawlo\FilamentSitemapGenerator\Tests;
 
 use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
 use BladeUI\Icons\BladeIconsServiceProvider;
@@ -19,7 +19,8 @@ use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
-use VendorName\Skeleton\SkeletonServiceProvider;
+use MuhammadNawlo\FilamentSitemapGenerator\FilamentSitemapGeneratorServiceProvider;
+use Spatie\Sitemap\SitemapServiceProvider;
 
 class TestCase extends Orchestra
 {
@@ -30,9 +31,13 @@ class TestCase extends Orchestra
     {
         parent::setUp();
 
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'VendorName\\Skeleton\\Database\\Factories\\' . class_basename($modelName) . 'Factory'
-        );
+        Factory::guessFactoryNamesUsing(function (string $modelName): string {
+            if (str_starts_with($modelName, 'MuhammadNawlo\\FilamentSitemapGenerator\\Tests\\Fixtures\\Models\\')) {
+                return 'MuhammadNawlo\\FilamentSitemapGenerator\\Tests\\Fixtures\\Factories\\' . class_basename($modelName) . 'Factory';
+            }
+
+            return 'MuhammadNawlo\\FilamentSitemapGenerator\\Database\\Factories\\' . class_basename($modelName) . 'Factory';
+        });
     }
 
     protected function getPackageProviders($app)
@@ -51,7 +56,8 @@ class TestCase extends Orchestra
             SupportServiceProvider::class,
             TablesServiceProvider::class,
             WidgetsServiceProvider::class,
-            SkeletonServiceProvider::class,
+            FilamentSitemapGeneratorServiceProvider::class,
+            SitemapServiceProvider::class,
         ];
 
         sort($providers);
@@ -62,10 +68,50 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ]);
+        $testingPath = storage_path('framework/testing');
+        if (! is_dir($testingPath)) {
+            mkdir($testingPath, 0755, true);
+        }
+        $app['config']->set('filament-sitemap-generator.path', $testingPath . DIRECTORY_SEPARATOR . 'sitemap.xml');
+        $app['config']->set('filament-sitemap-generator.schedule.enabled', true);
     }
 
     protected function defineDatabaseMigrations(): void
     {
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
+    }
+
+    protected function tearDown(): void
+    {
+        $this->cleanSitemapFiles();
+        parent::tearDown();
+    }
+
+    private function cleanSitemapFiles(): void
+    {
+        $path = config('filament-sitemap-generator.path');
+        if (! is_string($path)) {
+            return;
+        }
+        $dir = dirname($path);
+        if (! is_dir($dir)) {
+            return;
+        }
+        $files = array_merge(
+            glob($dir . DIRECTORY_SEPARATOR . 'sitemap.xml') ?: [],
+            glob($dir . DIRECTORY_SEPARATOR . 'sitemap-*.xml') ?: []
+        );
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
     }
 }
