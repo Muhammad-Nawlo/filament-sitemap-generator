@@ -15,6 +15,21 @@
         };
     @endphp
 
+    <style>
+        .filament-sitemap-preview-scroll {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow: auto !important;
+            box-sizing: border-box !important;
+        }
+        .filament-sitemap-preview-scroll pre {
+            display: block !important;
+            min-width: min-content;
+            white-space: pre;
+            word-break: break-all;
+        }
+    </style>
     <div
         x-data="{
             copied: false,
@@ -56,7 +71,7 @@
                 }
 
                 if (!copySuccess) {
-                    prompt('Manual copy – press Ctrl+C (or Cmd+C) then Enter', text);
+                    prompt({{ \Illuminate\Support\Js::from(__('filament-sitemap-generator::page.preview_manual_copy_prompt')) }}, text);
                 }
             },
             showCopiedFeedback() {
@@ -130,11 +145,12 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('filament-sitemap-generator::page.validation_read_failed') }}</p>
                 </div>
             @else
-                <div
-                    class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 overflow-hidden">
-                    <pre
-                        id="sitemap-preview-content-{{ $this->getId() }}"
-                        class="p-4 text-xs font-mono text-gray-700 dark:text-gray-300 overflow-auto max-h-[70vh] whitespace-pre-wrap break-all">{{   $content }} </pre>
+                <div class="w-full min-w-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30" style="max-width: 100%;">
+                    <div class="filament-sitemap-preview-scroll p-4" style="max-height: 70vh;">
+                        <pre
+                            id="sitemap-preview-content-{{ $this->getId() }}"
+                            class="text-xs font-mono text-gray-700 dark:text-gray-300 m-0">{{   $content }}</pre>
+                    </div>
                 </div>
             @endif
         </x-filament::section>

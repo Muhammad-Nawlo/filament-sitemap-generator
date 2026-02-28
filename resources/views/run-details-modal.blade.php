@@ -7,7 +7,7 @@
         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('filament-sitemap-generator::page.stats_status') }}</dt>
         <dd>
             <x-filament::badge :color="$run->isSuccess() ? 'success' : 'danger'">
-                {{ $run->status }}
+                {{ $run->isSuccess() ? __('filament-sitemap-generator::page.stats_status_success') : __('filament-sitemap-generator::page.stats_status_failed') }}
             </x-filament::badge>
         </dd>
     </div>

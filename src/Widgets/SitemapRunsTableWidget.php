@@ -38,7 +38,7 @@ class SitemapRunsTableWidget extends BaseTableWidget
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('ID')
+                    ->label(__('filament-sitemap-generator::page.table_id'))
                     ->sortable()
                     ->numeric(),
                 TextColumn::make('status')
@@ -81,7 +81,7 @@ class SitemapRunsTableWidget extends BaseTableWidget
                 TextColumn::make('error_message')
                     ->label(__('filament-sitemap-generator::page.run_error_message'))
                     ->limit(40)
-                    ->placeholder('-')
+                    ->placeholder(__('filament-sitemap-generator::page.placeholder_empty'))
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -97,9 +97,9 @@ class SitemapRunsTableWidget extends BaseTableWidget
                 Filter::make('generated_at')
                     ->form([
                         \Filament\Forms\Components\DatePicker::make('from')
-                            ->label(__('filament-sitemap-generator::page.stats_last_generated') . ' (from)'),
+                            ->label(__('filament-sitemap-generator::page.stats_last_generated') . ' (' . __('filament-sitemap-generator::page.filter_from') . ')'),
                         \Filament\Forms\Components\DatePicker::make('until')
-                            ->label(__('filament-sitemap-generator::page.stats_last_generated') . ' (until)'),
+                            ->label(__('filament-sitemap-generator::page.stats_last_generated') . ' (' . __('filament-sitemap-generator::page.filter_until') . ')'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         if (! empty($data['from'])) {
@@ -114,10 +114,10 @@ class SitemapRunsTableWidget extends BaseTableWidget
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
                         if (! empty($data['from'])) {
-                            $indicators[] = Indicator::make('From ' . $data['from']);
+                            $indicators[] = Indicator::make(__('filament-sitemap-generator::page.filter_from') . ' ' . $data['from']);
                         }
                         if (! empty($data['until'])) {
-                            $indicators[] = Indicator::make('Until ' . $data['until']);
+                            $indicators[] = Indicator::make(__('filament-sitemap-generator::page.filter_until') . ' ' . $data['until']);
                         }
 
                         return $indicators;
@@ -131,7 +131,7 @@ class SitemapRunsTableWidget extends BaseTableWidget
                         ->modalHeading(__('filament-sitemap-generator::page.run_details'))
                         ->modalContent(fn (SitemapRun $record): \Illuminate\Contracts\View\View => view('filament-sitemap-generator::run-details-modal', ['run' => $record]))
                         ->modalSubmitAction(false)
-                        ->modalCancelActionLabel('Close'),
+                        ->modalCancelActionLabel(__('filament-sitemap-generator::page.modal_close')),
                     Action::make('retry')
                         ->label(__('filament-sitemap-generator::page.runs_retry'))
                         ->icon('heroicon-o-arrow-path')

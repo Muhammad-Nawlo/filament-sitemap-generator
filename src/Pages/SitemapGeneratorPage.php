@@ -119,7 +119,7 @@ class SitemapGeneratorPage extends Page
                     ->label(__('filament-sitemap-generator::page.action_clear'))
                     ->modalHeading(__('filament-sitemap-generator::page.confirm_clear_title'))
                     ->modalDescription(__('filament-sitemap-generator::page.confirm_clear_body'))
-                    ->modalSubmitActionLabel('Clear')
+                    ->modalSubmitActionLabel(__('filament-sitemap-generator::page.action_clear'))
                     ->color('warning')
                     ->action(function (): void {
                         $removed = $this->getSitemapGenerator()->clear();

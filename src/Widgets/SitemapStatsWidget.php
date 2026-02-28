@@ -20,7 +20,7 @@ class SitemapStatsWidget extends BaseWidget
 
         if ($run === null) {
             return [
-                Stat::make(__('filament-sitemap-generator::page.stats_last_generated'), '-')
+                Stat::make(__('filament-sitemap-generator::page.stats_last_generated'), __('filament-sitemap-generator::page.placeholder_empty'))
                     ->description(__('filament-sitemap-generator::page.stats_no_runs')),
             ];
         }

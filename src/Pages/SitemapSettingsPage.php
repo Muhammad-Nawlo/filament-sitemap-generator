@@ -96,7 +96,7 @@ class SitemapSettingsPage extends Page
     {
         return [
             Action::make('save')
-                ->label('Save')
+                ->label(__('filament-sitemap-generator::page.settings_save'))
                 ->submit('save'),
         ];
     }
@@ -126,7 +126,7 @@ class SitemapSettingsPage extends Page
                                     ->rules(['required', 'string',
                                         fn (): Closure => function (string $attribute, $value, Closure $fail) {
                                             if ($value === '' || (! str_starts_with($value, '/') && ! str_starts_with($value, 'http://') && ! str_starts_with($value, 'https://'))) {
-                                                $fail(__('filament-sitemap-generator::page.settings_url') . ' must be a path (e.g. /) or a full URL.');
+                                                $fail(__('filament-sitemap-generator::page.settings_url') . ' ' . __('filament-sitemap-generator::page.validation_url_must_be_path_or_url'));
                                             }
                                         },
                                     ]),
@@ -162,7 +162,7 @@ class SitemapSettingsPage extends Page
                                                 return;
                                             }
                                             if (! class_exists($value)) {
-                                                $fail(__('filament-sitemap-generator::page.settings_model_class') . ' must be an existing class.');
+                                                $fail(__('filament-sitemap-generator::page.settings_model_class') . ' ' . __('filament-sitemap-generator::page.validation_class_must_exist'));
                                             }
                                         },
                                     ]),
@@ -306,7 +306,7 @@ class SitemapSettingsPage extends Page
                                         return;
                                     }
                                     if (! is_string($value) || ! class_exists($value)) {
-                                        $fail(__('filament-sitemap-generator::page.settings_crawl_profile') . ' must be an existing class.');
+                                        $fail(__('filament-sitemap-generator::page.settings_crawl_profile') . ' ' . __('filament-sitemap-generator::page.validation_class_must_exist'));
                                     }
                                 },
                             ]),
@@ -319,7 +319,7 @@ class SitemapSettingsPage extends Page
                                         return;
                                     }
                                     if (! is_string($value) || ! class_exists($value)) {
-                                        $fail(__('filament-sitemap-generator::page.settings_should_crawl') . ' must be an existing class.');
+                                        $fail(__('filament-sitemap-generator::page.settings_should_crawl') . ' ' . __('filament-sitemap-generator::page.validation_class_must_exist'));
                                     }
                                 },
                             ]),
@@ -332,7 +332,7 @@ class SitemapSettingsPage extends Page
                                         return;
                                     }
                                     if (! is_string($value) || ! class_exists($value)) {
-                                        $fail(__('filament-sitemap-generator::page.settings_has_crawled') . ' must be an existing class.');
+                                        $fail(__('filament-sitemap-generator::page.settings_has_crawled') . ' ' . __('filament-sitemap-generator::page.validation_class_must_exist'));
                                     }
                                 },
                             ]),
@@ -364,8 +364,8 @@ class SitemapSettingsPage extends Page
                         Select::make('auto_generate_frequency')
                             ->label(__('filament-sitemap-generator::page.settings_auto_generate_frequency'))
                             ->options([
-                                'hourly' => 'Hourly',
-                                'daily' => 'Daily',
+                                'hourly' => __('filament-sitemap-generator::page.settings_frequency_hourly'),
+                                'daily' => __('filament-sitemap-generator::page.settings_frequency_daily'),
                             ])
                             ->nullable()
                             ->visible(fn ($get) => (bool) $get('auto_generate_enabled')),
@@ -464,7 +464,7 @@ class SitemapSettingsPage extends Page
                 $this->rollBackDatabaseTransaction();
                 Notification::make()
                     ->title(__('filament-sitemap-generator::page.notification_failed'))
-                    ->body('Settings table does not exist. Run migrations.')
+                    ->body(__('filament-sitemap-generator::page.settings_table_missing'))
                     ->danger()
                     ->send();
 

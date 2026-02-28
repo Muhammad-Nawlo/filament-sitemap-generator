@@ -124,4 +124,17 @@ return [
     'changefreq_monthly' => 'monthly',
     'changefreq_yearly' => 'yearly',
     'changefreq_never' => 'never',
+
+    'settings_save' => 'Save',
+    'settings_table_missing' => 'Settings table does not exist. Run migrations.',
+    'validation_url_must_be_path_or_url' => 'must be a path (e.g. /) or a full URL.',
+    'validation_class_must_exist' => 'must be an existing class.',
+    'settings_frequency_hourly' => 'Hourly',
+    'settings_frequency_daily' => 'Daily',
+    'table_id' => 'ID',
+    'placeholder_empty' => '-',
+    'filter_from' => 'From',
+    'filter_until' => 'Until',
+    'modal_close' => 'Close',
+    'preview_manual_copy_prompt' => 'Manual copy – press Ctrl+C (or Cmd+C) then Enter',
 ];

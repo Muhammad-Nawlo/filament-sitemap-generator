@@ -124,4 +124,17 @@ return [
     'changefreq_monthly' => 'شهرياً',
     'changefreq_yearly' => 'سنوياً',
     'changefreq_never' => 'أبداً',
+
+    'settings_save' => 'حفظ',
+    'settings_table_missing' => 'جدول الإعدادات غير موجود. قم بتشغيل migrations.',
+    'validation_url_must_be_path_or_url' => 'يجب أن يكون مساراً (مثل /) أو رابطاً كاملاً.',
+    'validation_class_must_exist' => 'يجب أن يكون صنفاً موجوداً.',
+    'settings_frequency_hourly' => 'كل ساعة',
+    'settings_frequency_daily' => 'يومي',
+    'table_id' => 'المعرف',
+    'placeholder_empty' => '-',
+    'filter_from' => 'من',
+    'filter_until' => 'إلى',
+    'modal_close' => 'إغلاق',
+    'preview_manual_copy_prompt' => 'نسخ يدوي – اضغط Ctrl+C (أو Cmd+C) ثم Enter',
 ];
