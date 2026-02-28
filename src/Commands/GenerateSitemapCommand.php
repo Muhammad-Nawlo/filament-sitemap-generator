@@ -12,19 +12,20 @@ class GenerateSitemapCommand extends Command
 {
     protected $signature = 'filament-sitemap-generator:generate';
 
-    protected $description = 'Generate the sitemap';
+    protected $description;
 
     public function __construct(
         private readonly SitemapGeneratorService $sitemapGenerator
     ) {
         parent::__construct();
+        $this->description = __('filament-sitemap-generator::command.description');
     }
 
     public function handle(): int
     {
         if ($this->isQueueEnabled()) {
             $this->dispatchJob();
-            $this->info('Sitemap generation dispatched.');
+            $this->info(__('filament-sitemap-generator::command.dispatched'));
 
             return self::SUCCESS;
         }
@@ -59,11 +60,11 @@ class GenerateSitemapCommand extends Command
     {
         try {
             $this->sitemapGenerator->generate();
-            $this->info('Sitemap generated successfully.');
+            $this->info(__('filament-sitemap-generator::command.success'));
 
             return self::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('Sitemap generation failed: ' . $e->getMessage());
+            $this->error(__('filament-sitemap-generator::command.failed') . ': ' . $e->getMessage());
 
             return self::FAILURE;
         }

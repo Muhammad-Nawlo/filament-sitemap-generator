@@ -11,11 +11,26 @@ use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapGeneratorService;
 
 class SitemapGeneratorPage extends Page
 {
-    protected static string | \UnitEnum | null $navigationGroup = 'Settings';
+    protected static ?string $navigationGroup = null;
 
-    protected static ?string $navigationLabel = 'Sitemap';
+    protected static ?string $navigationLabel = null;
 
-    protected static ?string $title = 'Sitemap Generator';
+    protected static ?string $title = null;
+
+    public static function getNavigationGroup(): string
+    {
+        return __('filament-sitemap-generator::navigation.group');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('filament-sitemap-generator::navigation.label');
+    }
+
+    public static function getTitle(): string
+    {
+        return __('filament-sitemap-generator::page.title');
+    }
 
     protected string $view = 'filament-panels::pages.page';
 
@@ -40,7 +55,7 @@ class SitemapGeneratorPage extends Page
     {
         return [
             Action::make('generate')
-                ->label('Generate Sitemap')
+                ->label(__('filament-sitemap-generator::page.generate_button'))
                 ->action(function (): void {
                     $this->runGeneration();
                 }),
@@ -52,12 +67,12 @@ class SitemapGeneratorPage extends Page
         try {
             $this->getSitemapGenerator()->generate();
             Notification::make()
-                ->title('Sitemap generated successfully')
+                ->title(__('filament-sitemap-generator::page.notification_success'))
                 ->success()
                 ->send();
         } catch (\Throwable $e) {
             Notification::make()
-                ->title('Sitemap generation failed')
+                ->title(__('filament-sitemap-generator::page.notification_failed'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
