@@ -38,7 +38,8 @@ it('merges crawled URLs and deduplicates', function (): void {
     $sitemapWithTags->add(Url::create('https://example.com/page-b'));
     $sitemapWithTags->add(Url::create('https://example.com/page-a')); // duplicate
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -81,7 +82,8 @@ it('applies exclude_patterns to crawled URLs', function (): void {
     $sitemapWithTags->add(Url::create('https://example.com/admin/secret'));
     $sitemapWithTags->add(Url::create('https://example.com/public-page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -120,7 +122,8 @@ it('applies exclude_patterns to crawled URLs', function (): void {
 });
 
 it('continues with static and model URLs when crawl fails', function (): void {
-    $failingGenerator = new class extends SitemapGenerator {
+    $failingGenerator = new class extends SitemapGenerator
+    {
         public function __construct()
         {
             $crawler = \Spatie\Crawler\Crawler::create();
@@ -157,7 +160,8 @@ it('restores sitemap.crawl_profile config after crawl with custom crawl_profile'
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -208,7 +212,8 @@ it('applies maximum_depth and completes with mock', function (): void {
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -244,7 +249,8 @@ it('accepts valid should_crawl invokable class', function (): void {
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -280,7 +286,8 @@ it('does not throw when should_crawl is invalid class', function (): void {
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -316,7 +323,8 @@ it('accepts valid has_crawled invokable class', function (): void {
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -352,7 +360,8 @@ it('does not throw when has_crawled is invalid class', function (): void {
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -388,7 +397,8 @@ it('does not override sitemap config when execute_javascript is false', function
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -426,7 +436,8 @@ it('restores sitemap.execute_javascript and chrome path after crawl when execute
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
@@ -468,7 +479,8 @@ it('completes without exception when execute_javascript is true and Browsershot 
     $sitemapWithTags = Sitemap::create();
     $sitemapWithTags->add(Url::create('https://example.com/page'));
 
-    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator {
+    $fakeGenerator = new class($sitemapWithTags) extends SitemapGenerator
+    {
         public function __construct(
             private readonly Sitemap $sitemap
         ) {
