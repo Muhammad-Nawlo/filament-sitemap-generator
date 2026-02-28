@@ -14,7 +14,7 @@ class SitemapPreviewWidget extends Widget implements HasForms
 {
     use InteractsWithForms;
 
-    protected  string $view = 'filament-sitemap-generator::widgets.sitemap-preview';
+    protected string $view = 'filament-sitemap-generator::widgets.sitemap-preview';
 
     protected int | string | array $columnSpan = 'full';
 
@@ -60,5 +60,4 @@ class SitemapPreviewWidget extends Widget implements HasForms
             ->success()
             ->send();
     }
-
 }

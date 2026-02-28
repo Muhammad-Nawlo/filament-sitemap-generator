@@ -49,7 +49,7 @@ class SitemapSettingsPage extends Page
         return __('filament-sitemap-generator::page.settings_title');
     }
 
-    public static function getNavigationIcon(): string|\BackedEnum|\Illuminate\Contracts\Support\Htmlable|null
+    public static function getNavigationIcon(): string | \BackedEnum | \Illuminate\Contracts\Support\Htmlable | null
     {
         return 'heroicon-o-cog-6-tooth';
     }
@@ -123,7 +123,7 @@ class SitemapSettingsPage extends Page
                                     ->required()
                                     ->rules(['required', 'string',
                                         fn (): Closure => function (string $attribute, $value, Closure $fail) {
-                                            if ($value === '' || (!str_starts_with($value, '/') && !str_starts_with($value, 'http://') && !str_starts_with($value, 'https://'))) {
+                                            if ($value === '' || (! str_starts_with($value, '/') && ! str_starts_with($value, 'http://') && ! str_starts_with($value, 'https://'))) {
                                                 $fail(__('filament-sitemap-generator::page.settings_url') . ' must be a path (e.g. /) or a full URL.');
                                             }
                                         },
@@ -155,15 +155,15 @@ class SitemapSettingsPage extends Page
                                     ->required()
                                     ->placeholder('App\\Models\\Post')
                                     ->rules(['required',
-                                    fn (): Closure => function (string $attribute, $value, Closure $fail) {
-                                        if (!is_string($value) || $value === '') {
-                                            return;
-                                        }
-                                        if (!class_exists($value)) {
-                                            $fail(__('filament-sitemap-generator::page.settings_model_class') . ' must be an existing class.');
-                                        }
-                                    },
-                                ]),
+                                        fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                                            if (! is_string($value) || $value === '') {
+                                                return;
+                                            }
+                                            if (! class_exists($value)) {
+                                                $fail(__('filament-sitemap-generator::page.settings_model_class') . ' must be an existing class.');
+                                            }
+                                        },
+                                    ]),
                                 TextInput::make('url_resolver_method')
                                     ->label(__('filament-sitemap-generator::page.settings_url_resolver_method'))
                                     ->helperText(__('filament-sitemap-generator::page.settings_url_resolver_method_help'))
@@ -229,7 +229,7 @@ class SitemapSettingsPage extends Page
                                 'daily' => 'Daily',
                             ])
                             ->nullable()
-                            ->visible(fn($get) => (bool)$get('auto_generate_enabled')),
+                            ->visible(fn ($get) => (bool) $get('auto_generate_enabled')),
                         Toggle::make('large_site_mode')
                             ->label(__('filament-sitemap-generator::page.settings_large_site_mode'))
                             ->default(false)
@@ -241,7 +241,7 @@ class SitemapSettingsPage extends Page
                             ->minValue(100)
                             ->default(1000)
                             ->required()
-                            ->visible(fn($get) => (bool)$get('large_site_mode')),
+                            ->visible(fn ($get) => (bool) $get('large_site_mode')),
                     ])
                     ->columns(2),
             ]);
@@ -301,7 +301,7 @@ class SitemapSettingsPage extends Page
 
             $data = $this->mutateFormDataBeforeSave($data);
 
-            if (!$this->settingsTableExists()) {
+            if (! $this->settingsTableExists()) {
                 $this->rollBackDatabaseTransaction();
                 Notification::make()
                     ->title(__('filament-sitemap-generator::page.notification_failed'))
@@ -333,13 +333,13 @@ class SitemapSettingsPage extends Page
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if (isset($data['chunk_size'])) {
-            $data['chunk_size'] = max(100, (int)$data['chunk_size']);
+            $data['chunk_size'] = max(100, (int) $data['chunk_size']);
         }
 
         return $data;

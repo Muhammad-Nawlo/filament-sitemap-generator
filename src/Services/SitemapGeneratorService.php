@@ -9,7 +9,6 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\Factory as HttpClientFactory;
 use MuhammadNawlo\FilamentSitemapGenerator\Models\SitemapRun;
-use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapSettingsResolver;
 use Spatie\Sitemap\Sitemap;
 use Spatie\Sitemap\SitemapIndex;
 use Spatie\Sitemap\Tags\Url;

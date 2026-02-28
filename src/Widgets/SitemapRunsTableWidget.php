@@ -23,7 +23,7 @@ class SitemapRunsTableWidget extends BaseTableWidget
 
     protected int | string | array $columnSpan = 'full';
 
-    public  function getTableHeading(): string
+    public function getTableHeading(): string
     {
         return (string) __('filament-sitemap-generator::page.tab_runs');
     }

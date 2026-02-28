@@ -11,7 +11,7 @@ use MuhammadNawlo\FilamentSitemapGenerator\Pages\SitemapSettingsPage;
 
 class SitemapOverviewAlertsWidget extends Widget
 {
-    protected  string $view = 'filament-sitemap-generator::widgets.sitemap-overview-alerts';
+    protected string $view = 'filament-sitemap-generator::widgets.sitemap-overview-alerts';
 
     protected int | string | array $columnSpan = 'full';
 
