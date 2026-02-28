@@ -36,7 +36,7 @@ class SitemapGeneratorPage extends Page
         return __('filament-sitemap-generator::navigation.label');
     }
 
-    public static function getNavigationIcon(): string|\BackedEnum|\Illuminate\Contracts\Support\Htmlable|null
+    public static function getNavigationIcon(): string | \BackedEnum | \Illuminate\Contracts\Support\Htmlable | null
     {
         return 'heroicon-o-map';
     }
@@ -106,15 +106,15 @@ class SitemapGeneratorPage extends Page
             ActionGroup::make([
                 Action::make('generate')
                     ->label(__('filament-sitemap-generator::page.action_generate'))
-                    ->action(fn() => $this->runGeneration())
-                    ->disabled(fn() => $this->isGenerating),
+                    ->action(fn () => $this->runGeneration())
+                    ->disabled(fn () => $this->isGenerating),
                 Action::make('regenerate')
                     ->label(__('filament-sitemap-generator::page.action_regenerate'))
                     ->action(function () use ($service) {
                         $service->clear();
                         $this->runGeneration();
                     })
-                    ->disabled(fn(): bool => $this->isGenerating),
+                    ->disabled(fn (): bool => $this->isGenerating),
                 Action::make('clear')
                     ->label(__('filament-sitemap-generator::page.action_clear'))
                     ->modalHeading(__('filament-sitemap-generator::page.confirm_clear_title'))
@@ -128,21 +128,21 @@ class SitemapGeneratorPage extends Page
                             ->success()
                             ->send();
                     })
-                    ->disabled(fn(): bool => $this->isGenerating),
+                    ->disabled(fn (): bool => $this->isGenerating),
                 Action::make('download')
                     ->label(__('filament-sitemap-generator::page.action_download'))
                     ->url($sitemapUrl)
                     ->openUrlInNewTab()
-                    ->visible(fn(): bool => file_exists($path)),
+                    ->visible(fn (): bool => file_exists($path)),
                 Action::make('validate')
                     ->label(__('filament-sitemap-generator::page.action_validate'))
-                    ->action(fn() => $this->runValidation())
-                    ->disabled(fn(): bool => $this->isGenerating),
+                    ->action(fn () => $this->runValidation())
+                    ->disabled(fn (): bool => $this->isGenerating),
                 Action::make('preview')
                     ->label(__('filament-sitemap-generator::page.action_preview'))
                     ->url($sitemapUrl)
                     ->openUrlInNewTab()
-                    ->visible(fn(): bool => file_exists($path)),
+                    ->visible(fn (): bool => file_exists($path)),
             ])
                 ->label(__('filament-sitemap-generator::page.generate_button'))
                 ->icon('heroicon-o-cog-6-tooth'),
@@ -152,6 +152,7 @@ class SitemapGeneratorPage extends Page
     private function runGeneration(): void
     {
         $this->isGenerating = true;
+
         try {
             $run = $this->getSitemapGenerator()->generate();
 

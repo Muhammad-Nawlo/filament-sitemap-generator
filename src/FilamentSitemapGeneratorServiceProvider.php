@@ -142,7 +142,7 @@ class FilamentSitemapGeneratorServiceProvider extends PackageServiceProvider
                 }
             }
 
-            if (!$enabled) {
+            if (! $enabled) {
                 $enabled = config('filament-sitemap-generator.schedule.enabled', false) === true;
                 $frequency = config('filament-sitemap-generator.schedule.frequency', 'daily');
             }
