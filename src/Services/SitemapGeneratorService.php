@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use MuhammadNawlo\FilamentSitemapGenerator\Models\SitemapRun;
-use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapSettingsResolver;
 use Spatie\Sitemap\Contracts\Sitemapable;
 use Spatie\Sitemap\Sitemap;
 use Spatie\Sitemap\SitemapGenerator;
@@ -536,9 +535,11 @@ class SitemapGeneratorService
                     Log::info('Filament Sitemap Generator: retrying crawl without JavaScript.');
                     config(['sitemap.execute_javascript' => false]);
                 }
+
                 try {
                     $generator = $this->buildCrawlGenerator($url, $crawl);
                     $crawledSitemap = $generator->getSitemap();
+
                     break;
                 } catch (\Throwable $e) {
                     Log::error('Filament Sitemap Generator: crawl failed.', [
@@ -548,6 +549,7 @@ class SitemapGeneratorService
                     if ($attempt === 0 && $executeJs) {
                         continue;
                     }
+
                     break;
                 }
             }
@@ -624,6 +626,7 @@ class SitemapGeneratorService
         if ($class === '' || ! class_exists($class)) {
             return null;
         }
+
         try {
             $instance = app($class);
             if (! is_callable($instance)) {

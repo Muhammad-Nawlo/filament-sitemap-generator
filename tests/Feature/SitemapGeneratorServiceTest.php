@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use MuhammadNawlo\FilamentSitemapGenerator\Models\SitemapSetting;
 use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapGeneratorService;
 use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostSitemapableIterable;
 use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostSitemapableSingle;
@@ -11,7 +12,6 @@ use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostWithInv
 use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostWithLastmod;
 use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostWithSitemapUrl;
 use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostWithVideos;
-use MuhammadNawlo\FilamentSitemapGenerator\Models\SitemapSetting;
 
 beforeEach(function (): void {
     config()->set('filament-sitemap-generator.static_urls', [

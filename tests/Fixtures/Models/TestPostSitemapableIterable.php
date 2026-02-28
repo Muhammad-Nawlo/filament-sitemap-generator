@@ -14,7 +14,7 @@ class TestPostSitemapableIterable extends TestPost implements Sitemapable
         return \MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Factories\TestPostSitemapableIterableFactory::new();
     }
 
-    public function toSitemapTag(): Url|string|array
+    public function toSitemapTag(): Url | string | array
     {
         return [
             Url::create('https://example.com/posts/' . $this->id),
