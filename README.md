@@ -52,7 +52,8 @@ Configure `config/filament-sitemap-generator.php` (path, static URLs, models, sc
 | Google News sitemap | ✅ Implemented | Separate `sitemap-news.xml`; 48-hour window; config-driven |
 | Search engine ping | ✅ Implemented | Google and Bing; main sitemap URL only; try/catch per engine |
 | Multi-site support | 🚧 Planned | Single site only; no tenant or domain-specific sitemaps |
-| Storage disk abstraction | ❌ Not supported | Writes to filesystem path only; no Laravel disk abstraction |
+| Storage disk abstraction | ✅ Implemented | Output mode **file** (path) or **disk** (Laravel disk); config or Filament Settings |
+| Optional URL crawling | ✅ Implemented | Spatie crawler; merge with static/model URLs; dedupe; optional JS execution |
 | Event hooks | ❌ Not supported | No before/after or URL-collected events; extension via config/service binding only |
 
 ---
@@ -191,6 +192,137 @@ $this->app->singleton(SitemapGeneratorService::class, MyCustomSitemapGeneratorSe
 ```
 
 Ensure your implementation is compatible with callers that type-hint `SitemapGeneratorService` (Filament page, command, job) or provide the same public `generate(): bool` contract.
+
+---
+
+## Output modes (File vs Disk)
+
+You can write the sitemap to a **filesystem path** or to a **Laravel disk**.
+
+- **File mode (default):** Sitemap is written to a full path (e.g. `public_path('sitemap.xml')`). Configure `output.mode` = `'file'` and `output.file_path`.
+- **Disk mode:** Sitemap is written via `Storage::disk($disk)->put($path, $xml)`. Configure `output.mode` = `'disk'`, `output.disk`, `output.disk_path`, and `output.visibility` (`'public'` or `'private'`).
+
+Config example:
+
+```php
+'output' => [
+    'mode' => 'file',
+    'file_path' => public_path('sitemap.xml'),
+    'disk' => 'public',
+    'disk_path' => 'sitemap.xml',
+    'visibility' => 'public',
+],
+```
+
+You can also set output mode and paths from **Filament → Settings → Sitemap Settings** (Output section). Values are stored in the database and override config when present.
+
+---
+
+## Crawling
+
+Optional **URL crawling** discovers links by crawling a base URL and merges them with static and model URLs. Crawling is **disabled by default**.
+
+- Enable via config: `crawl.enabled` = `true` and `crawl.url` (e.g. `https://example.com`).
+- Or enable from **Filament → Sitemap Settings → Crawling** (toggle and URL).
+- Crawled URLs are **deduplicated** with static and model URLs and respect **splitting** (`max_urls_per_file`).
+- Options: `concurrency`, `max_count`, `maximum_depth`, `exclude_patterns` (wildcards, e.g. `*admin*`).
+
+Config example:
+
+```php
+'crawl' => [
+    'enabled' => false,
+    'url' => null,
+    'concurrency' => 10,
+    'max_count' => null,
+    'max_tags_per_sitemap' => 50000,
+    'exclude_patterns' => ['*admin*', '*?preview=*'],
+],
+```
+
+---
+
+## Advanced crawler configuration
+
+You can plug in Spatie crawler behaviour via config or Filament Settings:
+
+- **Crawl profile:** `crawl.crawl_profile` — class name implementing `Spatie\Crawler\CrawlProfiles\CrawlProfile` (used by Spatie as `config('sitemap.crawl_profile')` during the run only).
+- **should_crawl:** `crawl.should_crawl` — invokable class: `(UriInterface $url) => bool`. If provided, only URLs for which this returns `true` are crawled.
+- **has_crawled:** `crawl.has_crawled` — invokable class: `(Url $url, ?ResponseInterface $response) => Url`. Transform or filter the tag before it is added to the crawl result.
+
+**Example: custom crawl profile**
+
+```php
+use Spatie\Crawler\CrawlProfiles\CrawlProfile;
+use Psr\Http\Message\UriInterface;
+
+class MyCrawlProfile extends CrawlProfile
+{
+    public function shouldCrawl(UriInterface $url): bool
+    {
+        return true; // or custom logic
+    }
+}
+```
+
+Register in config: `'crawl_profile' => MyCrawlProfile::class`.
+
+**Example: should_crawl invokable class**
+
+```php
+use Psr\Http\Message\UriInterface;
+
+class AllowOnlyBlog
+{
+    public function __invoke(UriInterface $url): bool
+    {
+        return str_contains((string) $url, '/blog/');
+    }
+}
+```
+
+Set `crawl.should_crawl` to `AllowOnlyBlog::class`.
+
+---
+
+## JavaScript execution requirements
+
+Crawling can run with **JavaScript execution** so that client-rendered links are discovered. This is **off by default** and requires:
+
+- **spatie/browsershot** (and thus Node.js and Chrome/Chromium) on the server.
+- Config: `crawl.execute_javascript` = `true`; optionally `crawl.chrome_binary_path` and `crawl.node_binary_path`.
+
+If `execute_javascript` is `true` but Browsershot is not installed, the plugin logs a warning and continues the crawl **without** JavaScript. If the JS crawl fails at runtime (e.g. Chrome not found), it retries once without JS, then continues generation. Config keys are applied temporarily and restored after the crawl so global config is not polluted.
+
+---
+
+## getSitemapVideos() example
+
+For Google Video sitemap support, implement `getSitemapVideos()` on your model. Return an array of entries with at least `thumbnail_loc`, `title`, `description`, and either `content_loc` or `player_loc`:
+
+```php
+use Spatie\Sitemap\Contracts\Sitemapable;
+use Spatie\Sitemap\Tags\Url;
+
+class Post extends Model implements Sitemapable
+{
+    public function getSitemapVideos(): array
+    {
+        return [
+            [
+                'thumbnail_loc' => 'https://example.com/thumbs/1.jpg',
+                'title' => 'My video title',
+                'description' => 'Short description',
+                'content_loc' => 'https://example.com/videos/1.mp4',
+                'duration' => 120,
+                'publication_date' => $this->published_at?->toIso8601String(),
+            ],
+        ];
+    }
+}
+```
+
+Optional keys include `duration`, `expiration_date`, `rating`, `view_count`, `publication_date`, `family_friendly`, `restriction`, `tags`, `allow`, `deny`, etc.
 
 ---
 

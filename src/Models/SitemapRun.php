@@ -18,6 +18,7 @@ class SitemapRun extends Model
         'total_urls',
         'static_urls',
         'model_urls',
+        'crawled_urls',
         'file_size',
         'duration_ms',
         'status',
@@ -31,6 +32,7 @@ class SitemapRun extends Model
             'total_urls' => 'integer',
             'static_urls' => 'integer',
             'model_urls' => 'integer',
+            'crawled_urls' => 'integer',
             'file_size' => 'integer',
             'duration_ms' => 'integer',
         ];

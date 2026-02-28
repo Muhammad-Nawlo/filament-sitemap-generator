@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use MuhammadNawlo\FilamentSitemapGenerator\Jobs\GenerateSitemapJob;
 use MuhammadNawlo\FilamentSitemapGenerator\Tests\Fixtures\Models\TestPostThatThrows;
 
@@ -26,10 +27,11 @@ it('returns exit code 0 on success', function (): void {
 });
 
 it('generates file when command runs', function (): void {
+    syncSitemapSettingsToTestingDisk();
+
     $this->artisan('filament-sitemap-generator:generate')->run();
 
-    $path = config('filament-sitemap-generator.path');
-    expect($path)->toBeString();
+    $path = Storage::disk('sitemap_testing')->path('sitemap.xml');
     expect(file_exists($path))->toBeTrue();
 });
 

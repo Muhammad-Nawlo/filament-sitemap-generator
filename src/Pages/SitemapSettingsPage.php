@@ -8,8 +8,10 @@ use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -216,6 +218,143 @@ class SitemapSettingsPage extends Page
                             ->default(false),
                     ])
                     ->columns(2),
+                Section::make(__('filament-sitemap-generator::page.settings_output'))
+                    ->schema([
+                        Select::make('output_mode')
+                            ->label(__('filament-sitemap-generator::page.settings_output_mode'))
+                            ->options([
+                                'file' => __('filament-sitemap-generator::page.settings_output_mode_file'),
+                                'disk' => __('filament-sitemap-generator::page.settings_output_mode_disk'),
+                            ])
+                            ->default('file')
+                            ->live(),
+                        TextInput::make('file_path')
+                            ->label(__('filament-sitemap-generator::page.settings_file_path'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_file_path_help'))
+                            ->required(fn (Get $get): bool => $get('output_mode') === 'file')
+                            ->visible(fn (Get $get): bool => $get('output_mode') === 'file'),
+                        TextInput::make('disk')
+                            ->label(__('filament-sitemap-generator::page.settings_disk'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_disk_help'))
+                            ->required(fn (Get $get): bool => $get('output_mode') === 'disk')
+                            ->visible(fn (Get $get): bool => $get('output_mode') === 'disk'),
+                        TextInput::make('disk_path')
+                            ->label(__('filament-sitemap-generator::page.settings_disk_path'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_disk_path_help'))
+                            ->required(fn (Get $get): bool => $get('output_mode') === 'disk')
+                            ->visible(fn (Get $get): bool => $get('output_mode') === 'disk'),
+                        Select::make('visibility')
+                            ->label(__('filament-sitemap-generator::page.settings_visibility'))
+                            ->options([
+                                'public' => __('filament-sitemap-generator::page.settings_visibility_public'),
+                                'private' => __('filament-sitemap-generator::page.settings_visibility_private'),
+                            ])
+                            ->default('public')
+                            ->visible(fn (Get $get): bool => $get('output_mode') === 'disk'),
+                    ])
+                    ->columns(2),
+                Section::make(__('filament-sitemap-generator::page.settings_crawling'))
+                    ->description(__('filament-sitemap-generator::page.settings_crawling_help'))
+                    ->schema([
+                        Toggle::make('crawl_enabled')
+                            ->label(__('filament-sitemap-generator::page.settings_crawl_enabled'))
+                            ->default(false)
+                            ->live(),
+                        TextInput::make('crawl_url')
+                            ->label(__('filament-sitemap-generator::page.settings_crawl_url'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_crawl_url_help'))
+                            ->url()
+                            ->required(fn (Get $get): bool => (bool) $get('crawl_enabled'))
+                            ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
+                        TextInput::make('concurrency')
+                            ->label(__('filament-sitemap-generator::page.settings_concurrency'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(10)
+                            ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
+                        TextInput::make('max_count')
+                            ->label(__('filament-sitemap-generator::page.settings_max_count'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_max_count_help'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->nullable()
+                            ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
+                        TextInput::make('maximum_depth')
+                            ->label(__('filament-sitemap-generator::page.settings_maximum_depth'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->nullable()
+                            ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
+                        Textarea::make('exclude_patterns')
+                            ->label(__('filament-sitemap-generator::page.settings_exclude_patterns'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_exclude_patterns_help'))
+                            ->rows(3)
+                            ->formatStateUsing(fn ($state) => is_array($state) ? implode("\n", $state) : (is_string($state) ? $state : ''))
+                            ->dehydrateStateUsing(fn ($state) => is_string($state) ? array_values(array_filter(array_map('trim', explode("\n", $state)))) : (is_array($state) ? $state : []))
+                            ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
+                    ])
+                    ->columns(2),
+                Section::make(__('filament-sitemap-generator::page.settings_advanced_crawler'))
+                    ->schema([
+                        TextInput::make('crawl_profile')
+                            ->label(__('filament-sitemap-generator::page.settings_crawl_profile'))
+                            ->helperText(__('filament-sitemap-generator::page.settings_crawl_profile_help'))
+                            ->placeholder('Spatie\Sitemap\Crawler\Profile')
+                            ->rules([
+                                fn (): \Closure => function (string $attribute, $value, \Closure $fail) {
+                                    if ($value === null || $value === '') {
+                                        return;
+                                    }
+                                    if (! is_string($value) || ! class_exists($value)) {
+                                        $fail(__('filament-sitemap-generator::page.settings_crawl_profile') . ' must be an existing class.');
+                                    }
+                                },
+                            ]),
+                        TextInput::make('should_crawl')
+                            ->label(__('filament-sitemap-generator::page.settings_should_crawl'))
+                            ->placeholder('App\Crawl\AllowAllShouldCrawl')
+                            ->rules([
+                                fn (): \Closure => function (string $attribute, $value, \Closure $fail) {
+                                    if ($value === null || $value === '') {
+                                        return;
+                                    }
+                                    if (! is_string($value) || ! class_exists($value)) {
+                                        $fail(__('filament-sitemap-generator::page.settings_should_crawl') . ' must be an existing class.');
+                                    }
+                                },
+                            ]),
+                        TextInput::make('has_crawled')
+                            ->label(__('filament-sitemap-generator::page.settings_has_crawled'))
+                            ->placeholder('App\Crawl\ModifyPriorityHasCrawled')
+                            ->rules([
+                                fn (): \Closure => function (string $attribute, $value, \Closure $fail) {
+                                    if ($value === null || $value === '') {
+                                        return;
+                                    }
+                                    if (! is_string($value) || ! class_exists($value)) {
+                                        $fail(__('filament-sitemap-generator::page.settings_has_crawled') . ' must be an existing class.');
+                                    }
+                                },
+                            ]),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
+                Section::make(__('filament-sitemap-generator::page.settings_js_execution'))
+                    ->description(__('filament-sitemap-generator::page.settings_js_execution_help'))
+                    ->schema([
+                        Toggle::make('execute_javascript')
+                            ->label(__('filament-sitemap-generator::page.settings_execute_javascript'))
+                            ->default(false)
+                            ->live(),
+                        TextInput::make('chrome_binary_path')
+                            ->label(__('filament-sitemap-generator::page.settings_chrome_binary_path'))
+                            ->visible(fn (Get $get): bool => (bool) $get('execute_javascript')),
+                        TextInput::make('node_binary_path')
+                            ->label(__('filament-sitemap-generator::page.settings_node_binary_path'))
+                            ->visible(fn (Get $get): bool => (bool) $get('execute_javascript')),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (Get $get): bool => (bool) $get('crawl_enabled')),
                 Section::make(__('filament-sitemap-generator::page.settings_automation'))
                     ->schema([
                         Toggle::make('auto_generate_enabled')
@@ -255,7 +394,7 @@ class SitemapSettingsPage extends Page
     protected function fillForm(): void
     {
         $settings = SitemapSetting::getSettings();
-        $this->form->fill($settings->toArray());
+        $this->form->fill(array_merge($this->getDefaultData(), $settings->toArray()));
     }
 
     /**
@@ -276,6 +415,9 @@ class SitemapSettingsPage extends Page
             ];
         }
 
+        $output = $config['output'] ?? [];
+        $crawl = $config['crawl'] ?? [];
+
         return [
             'static_urls' => $staticUrls,
             'models' => $models,
@@ -289,6 +431,23 @@ class SitemapSettingsPage extends Page
             'chunk_size' => 1000,
             'large_site_mode' => false,
             'enable_index_sitemap' => false,
+            'output_mode' => $output['mode'] ?? 'file',
+            'file_path' => $output['file_path'] ?? public_path('sitemap.xml'),
+            'disk' => $output['disk'] ?? 'public',
+            'disk_path' => $output['disk_path'] ?? 'sitemap.xml',
+            'visibility' => $output['visibility'] ?? 'public',
+            'crawl_enabled' => (bool) ($crawl['enabled'] ?? false),
+            'crawl_url' => $crawl['url'] ?? null,
+            'concurrency' => (int) ($crawl['concurrency'] ?? 10),
+            'max_count' => $crawl['max_count'] ?? null,
+            'maximum_depth' => $crawl['maximum_depth'] ?? null,
+            'exclude_patterns' => $crawl['exclude_patterns'] ?? [],
+            'crawl_profile' => $crawl['crawl_profile'] ?? null,
+            'should_crawl' => $crawl['should_crawl'] ?? null,
+            'has_crawled' => $crawl['has_crawled'] ?? null,
+            'execute_javascript' => (bool) ($crawl['execute_javascript'] ?? false),
+            'chrome_binary_path' => $crawl['chrome_binary_path'] ?? null,
+            'node_binary_path' => $crawl['node_binary_path'] ?? null,
         ];
     }
 
@@ -313,6 +472,8 @@ class SitemapSettingsPage extends Page
             }
 
             $settings = SitemapSetting::getSettings();
+            $columns = array_flip(SchemaFacade::getColumnListing($settings->getTable()));
+            $data = array_intersect_key($data, $columns);
             $settings->update($data);
 
             $this->commitDatabaseTransaction();
@@ -339,7 +500,21 @@ class SitemapSettingsPage extends Page
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if (isset($data['chunk_size'])) {
-            $data['chunk_size'] = max(100, (int)$data['chunk_size']);
+            $data['chunk_size'] = max(100, (int) $data['chunk_size']);
+        }
+        if (isset($data['exclude_patterns']) && ! is_array($data['exclude_patterns'])) {
+            $data['exclude_patterns'] = is_string($data['exclude_patterns'])
+                ? array_values(array_filter(array_map('trim', explode("\n", $data['exclude_patterns']))))
+                : [];
+        }
+        if (array_key_exists('concurrency', $data) && $data['concurrency'] !== null) {
+            $data['concurrency'] = (int) $data['concurrency'];
+        }
+        if (array_key_exists('max_count', $data)) {
+            $data['max_count'] = $data['max_count'] === null || $data['max_count'] === '' ? null : (int) $data['max_count'];
+        }
+        if (array_key_exists('maximum_depth', $data)) {
+            $data['maximum_depth'] = $data['maximum_depth'] === null || $data['maximum_depth'] === '' ? null : (int) $data['maximum_depth'];
         }
 
         return $data;

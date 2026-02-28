@@ -8,14 +8,46 @@ use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\Factory as HttpClientFactory;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use MuhammadNawlo\FilamentSitemapGenerator\Models\SitemapRun;
 use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapSettingsResolver;
+use Spatie\Sitemap\Contracts\Sitemapable;
 use Spatie\Sitemap\Sitemap;
+use Spatie\Sitemap\SitemapGenerator;
 use Spatie\Sitemap\SitemapIndex;
 use Spatie\Sitemap\Tags\Url;
 
 class SitemapGeneratorService
 {
+    /** @var array<string, true> URLs already added (for deduplication) */
+    protected array $seenUrls = [];
+
+    /** Used during buildStandardSitemaps for splitting / appendCrawledUrls */
+    private ?Sitemap $currentSitemap = null;
+
+    private int $currentSitemapCount = 0;
+
+    private int $currentPartNumber = 1;
+
+    /** @var list<string> */
+    private array $currentPartUrls = [];
+
+    private string $sitemapPathForBuild = '';
+
+    private string $sitemapDirForBuild = '';
+
+    private bool $isFileModeForBuild = true;
+
+    private int $maxUrlsPerFileForBuild = 50000;
+
+    private int $staticCountForRun = 0;
+
+    private int $modelCountForRun = 0;
+
+    private int $crawlCountForRun = 0;
+
     public function __construct(
         private readonly ?HttpClientFactory $http = null,
         private readonly ?SitemapSettingsResolver $resolver = null
@@ -47,8 +79,8 @@ class SitemapGeneratorService
                 $maxPerFile = 50000;
             }
 
-            [$partUrls, $staticUrlsCount, $modelUrlsCount] = $this->buildStandardSitemaps($path, $config, $maxPerFile);
-            $totalUrls = $staticUrlsCount + $modelUrlsCount;
+            [$partUrls, $staticUrlsCount, $modelUrlsCount, $crawledUrlsCount] = $this->buildStandardSitemaps($path, $config, $maxPerFile);
+            $totalUrls = $staticUrlsCount + $modelUrlsCount + $crawledUrlsCount;
 
             if ($partUrls !== []) {
                 $this->buildIndex($path, $partUrls);
@@ -62,7 +94,7 @@ class SitemapGeneratorService
                 $this->pingSearchEngines($path, $config);
             }
 
-            $fileSize = file_exists($path) ? (int) filesize($path) : 0;
+            $fileSize = $this->getOutputFileSize($path, $config);
             $durationMs = (int) round((microtime(true) - $start) * 1000);
 
             return $modelClass::create([
@@ -70,6 +102,7 @@ class SitemapGeneratorService
                 'total_urls' => $totalUrls,
                 'static_urls' => $staticUrlsCount,
                 'model_urls' => $modelUrlsCount,
+                'crawled_urls' => $crawledUrlsCount,
                 'file_size' => $fileSize,
                 'duration_ms' => $durationMs,
                 'status' => 'success',
@@ -83,6 +116,7 @@ class SitemapGeneratorService
                 'total_urls' => 0,
                 'static_urls' => 0,
                 'model_urls' => 0,
+                'crawled_urls' => 0,
                 'file_size' => 0,
                 'duration_ms' => $durationMs,
                 'status' => 'failed',
@@ -103,7 +137,39 @@ class SitemapGeneratorService
 
     public function clear(): bool
     {
-        $path = $this->getSitemapPath();
+        $config = $this->getConfig();
+        $path = $config['path'];
+        $output = $config['output'] ?? ['mode' => 'file'];
+        $mode = $output['mode'] ?? 'file';
+
+        if ($mode === 'disk') {
+            $disk = $output['disk'] ?? 'public';
+            $diskPath = $output['disk_path'] ?? 'sitemap.xml';
+            $dir = dirname($diskPath);
+            $dirPrefix = $dir !== '.' ? rtrim($dir, '/') . '/' : '';
+            $toDelete = [];
+            if (Storage::disk($disk)->exists($diskPath)) {
+                $toDelete[] = $diskPath;
+            }
+            $toDelete[] = $dirPrefix . 'sitemap-news.xml';
+            $files = Storage::disk($disk)->files($dir !== '.' ? $dir : '');
+            foreach ($files as $file) {
+                if (preg_match('#^sitemap-\d+\.xml$#', basename($file)) || basename($file) === 'sitemap-news.xml') {
+                    $toDelete[] = $file;
+                }
+            }
+            $toDelete = array_unique($toDelete);
+            $deleted = 0;
+            foreach ($toDelete as $f) {
+                if (Storage::disk($disk)->exists($f)) {
+                    Storage::disk($disk)->delete($f);
+                    $deleted++;
+                }
+            }
+
+            return $deleted > 0;
+        }
+
         $dir = dirname($path);
         $removed = false;
 
@@ -135,6 +201,61 @@ class SitemapGeneratorService
     }
 
     /**
+     * Write XML content to output (file or disk). Path is full filesystem path when mode is 'file', or disk-relative path when mode is 'disk'.
+     */
+    private function writeXml(string $path, string $xmlContent): void
+    {
+        $output = $this->getConfig()['output'] ?? ['mode' => 'file'];
+        $mode = $output['mode'] ?? 'file';
+
+        if ($mode === 'disk') {
+            $disk = $output['disk'] ?? 'public';
+            $visibility = $output['visibility'] ?? 'public';
+            Storage::disk($disk)->put($path, $xmlContent, $visibility);
+
+            return;
+        }
+
+        file_put_contents($path, $xmlContent);
+    }
+
+    /**
+     * Resolve public URL for a relative path (e.g. sitemap.xml, sitemap-1.xml). Used for sitemap index entries and ping.
+     */
+    private function resolvePublicUrl(string $relativePath): string
+    {
+        $output = $this->getConfig()['output'] ?? ['mode' => 'file'];
+        $mode = $output['mode'] ?? 'file';
+        $baseUrl = rtrim($this->getBaseUrl(), '/');
+
+        if ($mode === 'file') {
+            return $baseUrl . '/' . basename($relativePath);
+        }
+
+        return $baseUrl . '/' . ltrim($relativePath, '/');
+    }
+
+    /**
+     * Get file size for the main sitemap path (for SitemapRun). Works for both file and disk mode.
+     */
+    private function getOutputFileSize(string $path, array $config): int
+    {
+        $output = $config['output'] ?? ['mode' => 'file'];
+        $mode = $output['mode'] ?? 'file';
+
+        if ($mode === 'disk') {
+            $disk = $output['disk'] ?? 'public';
+            if (Storage::disk($disk)->exists($path)) {
+                return (int) Storage::disk($disk)->size($path);
+            }
+
+            return 0;
+        }
+
+        return file_exists($path) ? (int) filesize($path) : 0;
+    }
+
+    /**
      * Validate sitemap file. Memory-safe: reads up to 2MB for validation.
      *
      * @return array{status: 'valid'|'invalid'|'missing', message: string|null}
@@ -142,15 +263,26 @@ class SitemapGeneratorService
     public function validateSitemap(?string $path = null): array
     {
         $path ??= $this->getSitemapPath();
+        $config = $this->getConfig();
+        $output = $config['output'] ?? ['mode' => 'file'];
+        $mode = $output['mode'] ?? 'file';
 
-        if (! file_exists($path)) {
-            return ['status' => 'missing', 'message' => __('filament-sitemap-generator::page.validation_missing')];
-        }
-
-        $maxBytes = 2 * 1024 * 1024;
-        $content = @file_get_contents($path, false, null, 0, $maxBytes);
-        if ($content === false) {
-            return ['status' => 'invalid', 'message' => __('filament-sitemap-generator::page.validation_read_failed')];
+        if ($mode === 'disk') {
+            $disk = $output['disk'] ?? 'public';
+            if (! Storage::disk($disk)->exists($path)) {
+                return ['status' => 'missing', 'message' => __('filament-sitemap-generator::page.validation_missing')];
+            }
+            $content = Storage::disk($disk)->get($path);
+            $content = $content !== null ? substr($content, 0, 2 * 1024 * 1024) : '';
+        } else {
+            if (! file_exists($path)) {
+                return ['status' => 'missing', 'message' => __('filament-sitemap-generator::page.validation_missing')];
+            }
+            $maxBytes = 2 * 1024 * 1024;
+            $content = @file_get_contents($path, false, null, 0, $maxBytes);
+            if ($content === false) {
+                return ['status' => 'invalid', 'message' => __('filament-sitemap-generator::page.validation_read_failed')];
+            }
         }
 
         libxml_use_internal_errors(true);
@@ -177,27 +309,43 @@ class SitemapGeneratorService
     public function getPreviewData(?string $path = null): array
     {
         $path ??= $this->getSitemapPath();
-        $exists = file_exists($path);
-        $fileSize = $exists ? (int) filesize($path) : 0;
-        $lastModified = null;
-        if ($exists && ($mtime = @filemtime($path)) !== false) {
-            $lastModified = new \DateTimeImmutable('@' . $mtime);
+        $config = $this->getConfig();
+        $output = $config['output'] ?? ['mode' => 'file'];
+        $mode = $output['mode'] ?? 'file';
+
+        if ($mode === 'disk') {
+            $disk = $output['disk'] ?? 'public';
+            $exists = Storage::disk($disk)->exists($path);
+            $fileSize = 0;
+            $lastModified = null;
+            $raw = null;
+            if ($exists) {
+                $fileSize = (int) Storage::disk($disk)->size($path);
+                $raw = Storage::disk($disk)->get($path);
+                $lastModified = Storage::disk($disk)->lastModified($path);
+                $lastModified = $lastModified ? new \DateTimeImmutable('@' . $lastModified) : null;
+            }
+        } else {
+            $exists = file_exists($path);
+            $fileSize = $exists ? (int) filesize($path) : 0;
+            $lastModified = null;
+            if ($exists && ($mtime = @filemtime($path)) !== false) {
+                $lastModified = new \DateTimeImmutable('@' . $mtime);
+            }
+            $raw = $exists ? @file_get_contents($path, false, null, 0, 1024 * 1024) : false;
         }
+
         $validation = $this->validateSitemap($path);
 
         $content = null;
-        if ($exists) {
-            $maxBytes = 1024 * 1024;
-            $raw = @file_get_contents($path, false, null, 0, $maxBytes);
-            if ($raw !== false) {
-                $doc = new \DOMDocument;
-                $doc->preserveWhiteSpace = false;
-                $doc->formatOutput = true;
-                if (@$doc->loadXML($raw)) {
-                    $content = $doc->saveXML();
-                } else {
-                    $content = $raw;
-                }
+        if ($raw !== null && $raw !== false) {
+            $doc = new \DOMDocument;
+            $doc->preserveWhiteSpace = false;
+            $doc->formatOutput = true;
+            if (@$doc->loadXML($raw)) {
+                $content = $doc->saveXML();
+            } else {
+                $content = $raw;
             }
         }
 
@@ -211,48 +359,34 @@ class SitemapGeneratorService
     }
 
     /**
-     * @return array{0: list<string>, 1: int, 2: int} [partUrls, staticCount, modelCount]
+     * @return array{0: list<string>, 1: int, 2: int, 3: int} [partUrls, staticCount, modelCount, crawlCount]
      */
     private function buildStandardSitemaps(string $path, array $config, int $maxPerFile): array
     {
+        $this->seenUrls = [];
         $chunkSize = $config['chunk_size'];
         if ($chunkSize < 1) {
             $chunkSize = 500;
         }
 
-        $dir = dirname($path);
-        $baseUrl = $this->getBaseUrl();
-        $partUrls = [];
-        $partNumber = 1;
-        $current = Sitemap::create();
-        $count = 0;
-        $staticCount = 0;
-        $modelCount = 0;
+        $output = $config['output'] ?? ['mode' => 'file'];
+        $isFileMode = ($output['mode'] ?? 'file') === 'file';
+        $dir = $isFileMode ? dirname($path) : '';
 
-        $flushPart = function () use (&$current, &$count, &$partNumber, &$partUrls, $dir, $baseUrl): void {
-            if ($count === 0) {
-                return;
-            }
-            $filename = 'sitemap-' . $partNumber . '.xml';
-            $filePath = $dir . DIRECTORY_SEPARATOR . $filename;
-            $current->writeToFile($filePath);
-            $partUrls[] = $baseUrl . '/' . $filename;
-            $partNumber++;
-            $current = Sitemap::create();
-            $count = 0;
-        };
+        $this->currentSitemap = Sitemap::create();
+        $this->currentSitemapCount = 0;
+        $this->currentPartNumber = 1;
+        $this->currentPartUrls = [];
+        $this->sitemapPathForBuild = $path;
+        $this->sitemapDirForBuild = $dir;
+        $this->isFileModeForBuild = $isFileMode;
+        $this->maxUrlsPerFileForBuild = $maxPerFile;
+        $this->staticCountForRun = 0;
+        $this->modelCountForRun = 0;
+        $this->crawlCountForRun = 0;
 
-        $addUrl = function (Url $tag, string $source = 'static') use (&$current, &$count, &$staticCount, &$modelCount, $maxPerFile, $flushPart): void {
-            if ($count >= $maxPerFile) {
-                $flushPart();
-            }
-            $current->add($tag);
-            $count++;
-            if ($source === 'static') {
-                $staticCount++;
-            } else {
-                $modelCount++;
-            }
+        $addUrl = function (Url $tag, string $source): void {
+            $this->addTagToCurrentSitemap($tag, $source);
         };
 
         $staticUrls = $config['static_urls'] ?? [];
@@ -271,36 +405,295 @@ class SitemapGeneratorService
             }
             $modelClass::query()->chunk($chunkSize, function ($records) use ($options, $addUrl): void {
                 foreach ($records as $record) {
-                    $tag = $this->buildModelUrlTag($record, $options);
-                    if ($tag !== null) {
-                        $addUrl($tag, 'model');
+                    if ($record instanceof Sitemapable) {
+                        $this->addSitemapableRecordToSitemap($record, $addUrl);
+                    } else {
+                        $tag = $this->buildModelUrlTag($record, $options);
+                        if ($tag !== null) {
+                            $addUrl($tag, 'model');
+                        }
                     }
                 }
             });
         }
 
-        if ($partUrls === [] && $count > 0) {
-            $current->writeToFile($path);
-
-            return [[], $staticCount, $modelCount];
+        $crawl = $config['crawl'] ?? [];
+        if (! empty($crawl['enabled']) && isset($crawl['url']) && $crawl['url'] !== '') {
+            $this->appendCrawledUrls($config);
         }
 
-        if ($partUrls === [] && $count === 0) {
-            return [[], $staticCount, $modelCount];
+        $partUrls = $this->currentPartUrls;
+        $staticCount = $this->staticCountForRun;
+        $modelCount = $this->modelCountForRun;
+        $crawlCount = $this->crawlCountForRun;
+
+        if ($partUrls === [] && $this->currentSitemapCount > 0) {
+            $xml = $this->currentSitemap->render();
+            $this->writeXml($path, $xml);
+
+            return [[], $staticCount, $modelCount, $crawlCount];
         }
 
-        if ($count > 0) {
-            $filename = 'sitemap-' . $partNumber . '.xml';
-            $filePath = $dir . DIRECTORY_SEPARATOR . $filename;
-            $current->writeToFile($filePath);
-            $partUrls[] = $baseUrl . '/' . $filename;
+        if ($partUrls === [] && $this->currentSitemapCount === 0) {
+            return [[], $staticCount, $modelCount, $crawlCount];
         }
 
-        return [$partUrls, $staticCount, $modelCount];
+        if ($this->currentSitemapCount > 0) {
+            $this->flushCurrentPart();
+            $partUrls = $this->currentPartUrls;
+        }
+
+        return [$partUrls, $staticCount, $modelCount, $crawlCount];
     }
 
     /**
-     * @param  list<string>  $partUrls
+     * Add a URL tag to the current sitemap (or next part). Deduplicates by URL. Used by static, model, and crawl.
+     */
+    private function addTagToCurrentSitemap(Url $tag, string $source): void
+    {
+        $loc = (string) $tag->url;
+        if ($loc === '' || isset($this->seenUrls[$loc])) {
+            return;
+        }
+        $this->seenUrls[$loc] = true;
+
+        if ($this->currentSitemapCount >= $this->maxUrlsPerFileForBuild) {
+            $this->flushCurrentPart();
+        }
+        $this->currentSitemap->add($tag);
+        $this->currentSitemapCount++;
+
+        if ($source === 'static') {
+            $this->staticCountForRun++;
+        } elseif ($source === 'model') {
+            $this->modelCountForRun++;
+        } elseif ($source === 'crawl') {
+            $this->crawlCountForRun++;
+        }
+    }
+
+    private function flushCurrentPart(): void
+    {
+        if ($this->currentSitemap === null || $this->currentSitemapCount === 0) {
+            return;
+        }
+        $filename = 'sitemap-' . $this->currentPartNumber . '.xml';
+        $writePath = $this->isFileModeForBuild
+            ? $this->sitemapDirForBuild . DIRECTORY_SEPARATOR . $filename
+            : $filename;
+        $xml = $this->currentSitemap->render();
+        $this->writeXml($writePath, $xml);
+        $this->currentPartUrls[] = $this->resolvePublicUrl($filename);
+        $this->currentPartNumber++;
+        $this->currentSitemap = Sitemap::create();
+        $this->currentSitemapCount = 0;
+    }
+
+    private function appendCrawledUrls(array $config): void
+    {
+        $crawl = $config['crawl'] ?? [];
+        $url = $crawl['url'] ?? '';
+        if ($url === '') {
+            return;
+        }
+        $maxCount = $crawl['max_count'] ?? null;
+        if ($maxCount === null) {
+            $maxCount = 1000;
+        }
+        $excludePatterns = $crawl['exclude_patterns'] ?? [];
+        $executeJs = (bool) ($crawl['execute_javascript'] ?? false);
+        if ($executeJs && ! class_exists(\Spatie\Browsershot\Browsershot::class)) {
+            Log::warning('Filament Sitemap Generator: JavaScript crawl disabled. Require spatie/browsershot, Node.js, and Chrome/Chromium.', [
+                'requirement' => 'spatie/browsershot',
+            ]);
+            $executeJs = false;
+        }
+
+        $originalCrawlProfile = config('sitemap.crawl_profile');
+        $originalExecuteJs = config('sitemap.execute_javascript');
+        $originalChromePath = config('sitemap.chrome_binary_path');
+        $originalNodePath = config('sitemap.node_binary_path');
+
+        try {
+            if (! empty($crawl['crawl_profile'])) {
+                config(['sitemap.crawl_profile' => $crawl['crawl_profile']]);
+            }
+
+            if ($executeJs) {
+                config(['sitemap.execute_javascript' => true]);
+                if (! empty($crawl['chrome_binary_path'])) {
+                    config(['sitemap.chrome_binary_path' => $crawl['chrome_binary_path']]);
+                }
+                if (! empty($crawl['node_binary_path'])) {
+                    config(['sitemap.node_binary_path' => $crawl['node_binary_path']]);
+                }
+                Log::info('Sitemap crawl running with JavaScript execution enabled.');
+            }
+
+            $crawledSitemap = null;
+            for ($attempt = 0; $attempt <= 1; $attempt++) {
+                if ($attempt === 1 && $executeJs) {
+                    Log::info('Filament Sitemap Generator: retrying crawl without JavaScript.');
+                    config(['sitemap.execute_javascript' => false]);
+                }
+                try {
+                    $generator = $this->buildCrawlGenerator($url, $crawl);
+                    $crawledSitemap = $generator->getSitemap();
+                    break;
+                } catch (\Throwable $e) {
+                    Log::error('Filament Sitemap Generator: crawl failed.', [
+                        'url' => $url,
+                        'message' => $e->getMessage(),
+                    ]);
+                    if ($attempt === 0 && $executeJs) {
+                        continue;
+                    }
+                    break;
+                }
+            }
+
+            if ($crawledSitemap !== null) {
+                foreach ($crawledSitemap->getTags() as $tag) {
+                    if (! $tag instanceof Url) {
+                        continue;
+                    }
+                    $loc = (string) $tag->url;
+                    if ($this->urlMatchesExcludePatterns($loc, $excludePatterns)) {
+                        continue;
+                    }
+                    $this->addTagToCurrentSitemap($tag, 'crawl');
+                }
+            }
+        } finally {
+            config(['sitemap.crawl_profile' => $originalCrawlProfile]);
+            config(['sitemap.execute_javascript' => $originalExecuteJs]);
+            config(['sitemap.chrome_binary_path' => $originalChromePath]);
+            config(['sitemap.node_binary_path' => $originalNodePath]);
+        }
+    }
+
+    /**
+     * Build and configure SitemapGenerator for crawl. Does not run getSitemap().
+     *
+     * @param  array<string, mixed>  $crawl
+     */
+    private function buildCrawlGenerator(string $url, array $crawl): SitemapGenerator
+    {
+        $maxCount = $crawl['max_count'] ?? null;
+        if ($maxCount === null) {
+            $maxCount = 1000;
+        }
+        $generator = SitemapGenerator::create($url)
+            ->setConcurrency((int) ($crawl['concurrency'] ?? 10))
+            ->setMaximumCrawlCount($maxCount)
+            ->maxTagsPerSitemap((int) ($crawl['max_tags_per_sitemap'] ?? 50000));
+
+        if (isset($crawl['maximum_depth']) && $crawl['maximum_depth'] !== null) {
+            $depth = (int) $crawl['maximum_depth'];
+            $generator->configureCrawler(function ($crawler) use ($depth): void {
+                $crawler->setMaximumDepth($depth);
+            });
+        }
+
+        $shouldCrawlCallable = $this->resolveInvokable((string) ($crawl['should_crawl'] ?? ''));
+        if ($shouldCrawlCallable !== null) {
+            $generator->shouldCrawl($shouldCrawlCallable);
+        } elseif (! empty($crawl['should_crawl'])) {
+            Log::warning('Filament Sitemap Generator: should_crawl class invalid or not invokable.', [
+                'class' => $crawl['should_crawl'],
+            ]);
+        }
+
+        $hasCrawledCallable = $this->resolveInvokable((string) ($crawl['has_crawled'] ?? ''));
+        if ($hasCrawledCallable !== null) {
+            $generator->hasCrawled($hasCrawledCallable);
+        } elseif (! empty($crawl['has_crawled'])) {
+            Log::warning('Filament Sitemap Generator: has_crawled class invalid or not invokable.', [
+                'class' => $crawl['has_crawled'],
+            ]);
+        }
+
+        return $generator;
+    }
+
+    /**
+     * Resolve a class from the container as an invokable callable. Returns null if class does not exist or is not callable.
+     */
+    private function resolveInvokable(string $class): ?callable
+    {
+        if ($class === '' || ! class_exists($class)) {
+            return null;
+        }
+        try {
+            $instance = app($class);
+            if (! is_callable($instance)) {
+                return null;
+            }
+
+            return $instance;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $patterns  Wildcard patterns (Str::is)
+     */
+    private function urlMatchesExcludePatterns(string $url, array $patterns): bool
+    {
+        foreach ($patterns as $pattern) {
+            if (Str::is($pattern, $url)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Add a Sitemapable record's tag(s) to the sitemap via the addUrl callback.
+     * Handles single Url|string or iterable (array/Traversable) return from toSitemapTag().
+     *
+     * @param  callable(Url, string): void  $addUrl
+     */
+    private function addSitemapableRecordToSitemap(Sitemapable $record, callable $addUrl): void
+    {
+        $result = $record->toSitemapTag();
+
+        if (is_array($result) || $result instanceof \Traversable) {
+            foreach ($result as $tag) {
+                $urlTag = $this->normalizeSitemapTagToUrl($tag);
+                if ($urlTag !== null) {
+                    $addUrl($urlTag, 'model');
+                }
+            }
+
+            return;
+        }
+
+        $urlTag = $this->normalizeSitemapTagToUrl($result);
+        if ($urlTag !== null) {
+            $addUrl($urlTag, 'model');
+        }
+    }
+
+    /**
+     * Convert a single tag from toSitemapTag() (Url|string) to Url for adding, or null to skip.
+     */
+    private function normalizeSitemapTagToUrl(mixed $tag): ?Url
+    {
+        if ($tag instanceof Url) {
+            return $tag;
+        }
+        if (is_string($tag) && trim($tag) !== '') {
+            return Url::create($this->normalizeUrl($tag));
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<string>  $partUrls  Public URLs for each part sitemap
      */
     private function buildIndex(string $path, array $partUrls): void
     {
@@ -308,7 +701,8 @@ class SitemapGeneratorService
         foreach ($partUrls as $url) {
             $index->add($url);
         }
-        $index->writeToFile($path);
+        $xml = $index->render();
+        $this->writeXml($path, $xml);
     }
 
     private function buildNewsSitemap(string $mainPath, array $config): void
@@ -321,10 +715,14 @@ class SitemapGeneratorService
             return;
         }
 
+        $output = $config['output'] ?? ['mode' => 'file'];
+        $isFileMode = ($output['mode'] ?? 'file') === 'file';
+        $newsPath = $isFileMode
+            ? dirname($mainPath) . DIRECTORY_SEPARATOR . 'sitemap-news.xml'
+            : 'sitemap-news.xml';
+
         $cutoff = Carbon::now()->subHours(48);
         $sitemap = Sitemap::create();
-        $dir = dirname($mainPath);
-        $newsPath = $dir . DIRECTORY_SEPARATOR . 'sitemap-news.xml';
 
         foreach ($models as $modelClass) {
             if (! is_string($modelClass) || ! class_exists($modelClass)) {
@@ -339,7 +737,8 @@ class SitemapGeneratorService
 
         $tags = $sitemap->getTags();
         if ($tags !== []) {
-            $sitemap->writeToFile($newsPath);
+            $xml = $sitemap->render();
+            $this->writeXml($newsPath, $xml);
         }
     }
 
@@ -384,9 +783,7 @@ class SitemapGeneratorService
 
     private function pingSearchEngines(string $path, array $config): void
     {
-        $baseUrl = rtrim($this->getBaseUrl(), '/');
-        $basename = basename($path);
-        $sitemapUrl = $baseUrl . '/' . $basename;
+        $sitemapUrl = $this->resolvePublicUrl($path);
 
         $engines = $config['ping_search_engines']['engines'] ?? [];
         $pingUrls = [
@@ -432,6 +829,7 @@ class SitemapGeneratorService
         $this->applyModelLastmod($tag, $record);
         $this->applyAlternateUrls($tag, $record);
         $this->applySitemapImages($tag, $record);
+        $this->applySitemapVideos($tag, $record);
 
         return $tag;
     }
@@ -483,6 +881,81 @@ class SitemapGeneratorService
                 $tag->addImage($this->normalizeUrl($url), $caption);
             }
         }
+    }
+
+    private function applySitemapVideos(Url $tag, Model $record): void
+    {
+        if (! method_exists($record, 'getSitemapVideos')) {
+            return;
+        }
+
+        $videos = $record->getSitemapVideos();
+        if (! is_array($videos)) {
+            return;
+        }
+
+        foreach ($videos as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $thumbnailLoc = $entry['thumbnail_loc'] ?? '';
+            $title = $entry['title'] ?? '';
+            $description = $entry['description'] ?? '';
+            $contentLoc = isset($entry['content_loc']) && is_string($entry['content_loc']) ? $entry['content_loc'] : null;
+            $playerLoc = isset($entry['player_loc']) && (is_string($entry['player_loc']) || is_array($entry['player_loc'])) ? $entry['player_loc'] : null;
+
+            if ($thumbnailLoc === '' || $title === '' || $description === '') {
+                continue;
+            }
+            if ($contentLoc === null && $playerLoc === null) {
+                continue;
+            }
+
+            $options = $this->extractVideoOptions($entry);
+            $allow = is_array($entry['allow'] ?? null) ? $entry['allow'] : [];
+            $deny = is_array($entry['deny'] ?? null) ? $entry['deny'] : [];
+            $tags = is_array($entry['tags'] ?? null) ? $entry['tags'] : [];
+
+            try {
+                $tag->addVideo(
+                    $this->normalizeUrl((string) $thumbnailLoc),
+                    $title,
+                    $description,
+                    $contentLoc !== null ? $this->normalizeUrl($contentLoc) : null,
+                    $playerLoc,
+                    $options,
+                    $allow,
+                    $deny,
+                    $tags
+                );
+            } catch (\Throwable) {
+                // Skip invalid video entry; do not break sitemap generation
+            }
+        }
+    }
+
+    /**
+     * Extract optional video keys into the options array for Spatie's addVideo().
+     *
+     * @param  array<string, mixed>  $entry
+     * @return array<string, mixed>
+     */
+    private function extractVideoOptions(array $entry): array
+    {
+        $optionalKeys = [
+            'duration', 'expiration_date', 'rating', 'view_count', 'publication_date',
+            'family_friendly', 'restriction', 'gallery_loc', 'price', 'requires_subscription',
+            'uploader', 'live',
+        ];
+        $options = [];
+        foreach ($optionalKeys as $key) {
+            if (array_key_exists($key, $entry) && $entry[$key] !== null && $entry[$key] !== '') {
+                $options[$key] = $entry[$key];
+            }
+        }
+
+        return $options;
     }
 
     /**

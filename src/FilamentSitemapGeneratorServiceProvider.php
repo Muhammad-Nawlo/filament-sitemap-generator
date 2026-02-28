@@ -117,7 +117,7 @@ class FilamentSitemapGeneratorServiceProvider extends PackageServiceProvider
     {
         return [
             '2025_02_28_000001_create_sitemap_runs_table',
-            '2025_02_28_000002_create_sitemap_settings_table'
+            '2025_02_28_000002_create_sitemap_settings_table',
         ];
     }
 

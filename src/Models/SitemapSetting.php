@@ -29,6 +29,23 @@ class SitemapSetting extends Model
         'chunk_size',
         'large_site_mode',
         'enable_index_sitemap',
+        'output_mode',
+        'file_path',
+        'disk',
+        'disk_path',
+        'visibility',
+        'crawl_enabled',
+        'crawl_url',
+        'concurrency',
+        'max_count',
+        'maximum_depth',
+        'exclude_patterns',
+        'crawl_profile',
+        'should_crawl',
+        'has_crawled',
+        'execute_javascript',
+        'chrome_binary_path',
+        'node_binary_path',
     ];
 
     protected function casts(): array
@@ -42,6 +59,9 @@ class SitemapSetting extends Model
             'chunk_size' => 'integer',
             'large_site_mode' => 'boolean',
             'enable_index_sitemap' => 'boolean',
+            'crawl_enabled' => 'boolean',
+            'exclude_patterns' => 'array',
+            'execute_javascript' => 'boolean',
         ];
     }
 
@@ -101,10 +121,14 @@ class SitemapSetting extends Model
     }
 
     /**
-     * Full filesystem path for the sitemap file.
+     * Full filesystem path for the sitemap file (used when output_mode is 'file' or legacy).
      */
     public function getStorageFullPath(): string
     {
+        if ($this->output_mode === 'file' && $this->file_path !== null && $this->file_path !== '') {
+            return $this->file_path;
+        }
+
         $path = $this->storage_path ?? 'public';
         $filename = $this->filename ?? 'sitemap.xml';
 

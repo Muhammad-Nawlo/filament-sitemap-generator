@@ -25,6 +25,26 @@ return new class extends Migration
             $table->unsignedInteger('chunk_size')->default(1000);
             $table->boolean('large_site_mode')->default(false);
             $table->boolean('enable_index_sitemap')->default(false);
+            $table->string('output_mode', 20)->nullable()->after('enable_index_sitemap');
+            $table->string('file_path', 500)->nullable()->after('output_mode');
+            $table->string('disk', 100)->nullable()->after('file_path');
+            $table->string('disk_path', 255)->nullable()->after('disk');
+            $table->string('visibility', 20)->nullable()->after('disk_path');
+
+            $table->boolean('crawl_enabled')->nullable()->after('visibility');
+            $table->string('crawl_url', 500)->nullable()->after('crawl_enabled');
+            $table->unsignedInteger('concurrency')->nullable()->after('crawl_url');
+            $table->unsignedInteger('max_count')->nullable()->after('concurrency');
+            $table->unsignedInteger('maximum_depth')->nullable()->after('max_count');
+            $table->json('exclude_patterns')->nullable()->after('maximum_depth');
+
+            $table->string('crawl_profile', 500)->nullable()->after('exclude_patterns');
+            $table->string('should_crawl', 500)->nullable()->after('crawl_profile');
+            $table->string('has_crawled', 500)->nullable()->after('should_crawl');
+
+            $table->boolean('execute_javascript')->nullable()->after('has_crawled');
+            $table->string('chrome_binary_path', 500)->nullable()->after('execute_javascript');
+            $table->string('node_binary_path', 500)->nullable()->after('chrome_binary_path');
             $table->timestamps();
         });
     }

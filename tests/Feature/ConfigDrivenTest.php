@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Storage;
 use MuhammadNawlo\FilamentSitemapGenerator\Services\SitemapGeneratorService;
 
 beforeEach(function (): void {
@@ -10,19 +11,14 @@ beforeEach(function (): void {
 });
 
 it('uses config path for output', function (): void {
-    $customPath = storage_path('framework/testing/custom-sitemap.xml');
-    $customDir = dirname($customPath);
-    if (! is_dir($customDir)) {
-        mkdir($customDir, 0755, true);
-    }
-    config()->set('filament-sitemap-generator.path', $customPath);
     config()->set('filament-sitemap-generator.static_urls', [['url' => '/', 'priority' => 1.0, 'changefreq' => 'daily']]);
     config()->set('filament-sitemap-generator.models', []);
+    syncSitemapSettingsToTestingDisk();
 
     app(SitemapGeneratorService::class)->generate();
 
-    expect(file_exists($customPath))->toBeTrue();
-    @unlink($customPath);
+    $path = Storage::disk('sitemap_testing')->path('sitemap.xml');
+    expect(file_exists($path))->toBeTrue();
 });
 
 it('uses config static_urls', function (): void {
@@ -30,10 +26,11 @@ it('uses config static_urls', function (): void {
         ['url' => '/custom-page', 'priority' => 0.5, 'changefreq' => 'yearly'],
     ]);
     config()->set('filament-sitemap-generator.models', []);
+    syncSitemapSettingsToTestingDisk();
 
     app(SitemapGeneratorService::class)->generate();
 
-    $path = config('filament-sitemap-generator.path');
+    $path = Storage::disk('sitemap_testing')->path('sitemap.xml');
     $content = (string) file_get_contents($path);
     expect($content)->toContain('custom-page');
     expect($content)->toContain('<priority>0.5</priority>');

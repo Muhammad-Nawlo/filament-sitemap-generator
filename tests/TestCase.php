@@ -80,6 +80,10 @@ class TestCase extends Orchestra
         }
         $app['config']->set('filament-sitemap-generator.path', $testingPath . DIRECTORY_SEPARATOR . 'sitemap.xml');
         $app['config']->set('filament-sitemap-generator.schedule.enabled', true);
+        $app['config']->set('filesystems.disks.sitemap_testing', [
+            'driver' => 'local',
+            'root' => $testingPath,
+        ]);
     }
 
     protected function defineDatabaseMigrations(): void

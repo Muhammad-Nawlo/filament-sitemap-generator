@@ -20,6 +20,7 @@ return new class extends Migration
             $table->unsignedInteger('duration_ms')->default(0);
             $table->string('status', 20);
             $table->text('error_message')->nullable();
+            $table->unsignedInteger('crawled_urls')->default(0)->after('model_urls');
             $table->timestamps();
         });
     }
